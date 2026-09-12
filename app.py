@@ -1,5 +1,8 @@
 import streamlit as st
+
 from transcribe import transcribe_audio
+from notes import generate_notes
+
 
 st.set_page_config(
     page_title="Lecture AI",
@@ -8,8 +11,16 @@ st.set_page_config(
 )
 
 st.title("Lecture AI")
+st.write("Record a lecture, transcribe it locally, and generate study notes.")
 
-st.write("Record a lecture or upload an existing recording.")
+
+# Store results so they survive Streamlit reruns
+if "transcript" not in st.session_state:
+    st.session_state.transcript = None
+
+if "notes" not in st.session_state:
+    st.session_state.notes = None
+
 
 audio = st.audio_input("Record lecture")
 
@@ -17,6 +28,7 @@ uploaded_audio = st.file_uploader(
     "Or upload an audio file",
     type=["mp3", "wav", "m4a"]
 )
+
 
 selected_audio = None
 
@@ -28,14 +40,35 @@ elif uploaded_audio:
     st.audio(uploaded_audio)
     selected_audio = uploaded_audio
 
+
 if selected_audio:
 
     if st.button("Transcribe Lecture"):
 
         with st.spinner("Transcribing locally..."):
+            st.session_state.transcript = transcribe_audio(selected_audio)
 
-            transcript = transcribe_audio(selected_audio)
+        # Clear old notes whenever a new transcript is created
+        st.session_state.notes = None
 
-        st.subheader("Transcript")
 
-        st.write(transcript)
+if st.session_state.transcript:
+
+    st.subheader("Transcript")
+
+    st.write(st.session_state.transcript)
+
+    if st.button("Generate Notes"):
+
+        with st.spinner("Generating study notes..."):
+            st.session_state.notes = generate_notes(
+                st.session_state.transcript
+            )
+
+
+if st.session_state.notes:
+
+    st.subheader("Lecture Notes")
+
+    st.markdown(st.session_state.notes)
+
