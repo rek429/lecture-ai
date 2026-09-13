@@ -5,3 +5,5 @@ __pycache__/
 venv/
 
 data/lectures/*.json
+data/users/*/lectures/*.json
+.streamlit/secrets.toml
