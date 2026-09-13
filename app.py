@@ -1,8 +1,7 @@
 import streamlit as st
 
-from transcribe import transcribe_audio
-from notes import generate_notes
-
+from services.transcription import transcribe_audio
+from services.note_generator import generate_notes
 
 st.set_page_config(
     page_title="Lecture AI",
