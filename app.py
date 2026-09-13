@@ -1,5 +1,5 @@
 import streamlit as st
-
+from services.chat_service import ask_lecture
 from services.transcription import transcribe_audio
 from services.note_generator import generate_notes
 from services.lecture_storage import save_lecture, load_lectures
@@ -162,10 +162,11 @@ if st.session_state.transcript:
             f"{st.session_state.lecture_title}"
         )
 
-    transcript_tab, notes_tab = st.tabs(
+    transcript_tab, notes_tab, chat_tab = st.tabs(
         [
             "Transcript",
-            "Lecture Notes"
+            "Lecture Notes",
+            "Chat"
         ]
     )
 
@@ -190,6 +191,29 @@ if st.session_state.transcript:
             st.info(
                 "Generate notes to view them here."
             )
+    with chat_tab:
+
+        question = st.text_input(
+            "Ask a question about this lecture"
+        )
+
+        if st.button("Ask Lecture"):
+
+            if question.strip():
+
+                with st.spinner("Thinking..."):
+                    answer = ask_lecture(
+                        st.session_state.transcript,
+                        question
+                    )
+
+                st.markdown(answer)
+
+            else:
+
+                st.warning(
+                    "Enter a question first."
+                )
 
 
     # Generate notes
