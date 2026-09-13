@@ -73,12 +73,14 @@ if selected_audio:
                 selected_audio
             )
 
-        # Clear old notes whenever a new transcript is created
+        # Clear old notes when a new transcript is created
         st.session_state.notes = None
 
 
-# Transcript
+# Lecture content
 if st.session_state.transcript:
+
+    st.divider()
 
     if st.session_state.course_name:
         st.write(
@@ -90,10 +92,28 @@ if st.session_state.transcript:
             f"**Lecture:** {st.session_state.lecture_title}"
         )
 
-    st.subheader("Transcript")
+    transcript_tab, notes_tab = st.tabs(
+        [
+            "Transcript",
+            "Lecture Notes"
+        ]
+    )
 
-    st.write(st.session_state.transcript)
+    with transcript_tab:
+        st.write(st.session_state.transcript)
 
+    with notes_tab:
+
+        if st.session_state.notes:
+            st.markdown(st.session_state.notes)
+
+        else:
+            st.info(
+                "Generate notes to view them here."
+            )
+
+
+    # Generate notes
     if st.button("Generate Notes"):
 
         with st.spinner("Generating study notes..."):
@@ -101,10 +121,4 @@ if st.session_state.transcript:
                 st.session_state.transcript
             )
 
-
-# Lecture notes
-if st.session_state.notes:
-
-    st.subheader("Lecture Notes")
-
-    st.markdown(st.session_state.notes)
+        st.rerun()
