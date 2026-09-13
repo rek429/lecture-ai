@@ -2,6 +2,7 @@ import streamlit as st
 
 from services.transcription import transcribe_audio
 from services.note_generator import generate_notes
+from services.lecture_storage import save_lecture
 
 
 st.set_page_config(
@@ -122,3 +123,18 @@ if st.session_state.transcript:
             )
 
         st.rerun()
+    # Save lecture
+    if st.session_state.transcript and st.session_state.notes:
+
+        if st.button("Save Lecture"):
+
+            file_path = save_lecture(
+                st.session_state.course_name,
+                st.session_state.lecture_title,
+                st.session_state.transcript,
+                st.session_state.notes
+            )
+
+            st.success(
+                f"Lecture saved successfully: {file_path}"
+            )
