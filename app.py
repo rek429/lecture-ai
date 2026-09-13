@@ -1,13 +1,16 @@
 import streamlit as st
-
 from services.chat_service import ask_lecture
 from services.transcription import transcribe_audio
 from services.note_generator import generate_notes
-from services.lecture_storage import (
-    save_lecture,
-    update_lecture,
-    load_lectures,
-    delete_lecture
+
+from services.supabase_service import (
+    get_or_create_user,
+    get_courses,
+    get_or_create_course,
+    create_lecture,
+    get_lectures,
+    update_supabase_lecture,
+    delete_supabase_lecture
 )
 
 
@@ -38,7 +41,12 @@ if not st.user.is_logged_in:
     st.stop()
 
 
-CURRENT_USER_ID = st.user.sub
+current_user = get_or_create_user(
+    st.user.sub,
+    st.user.email
+)
+
+CURRENT_USER_ID = current_user["id"]
 
 
 # --------------------------------------------------
@@ -60,14 +68,16 @@ if "lecture_title" not in st.session_state:
 if "lecture_saved" not in st.session_state:
     st.session_state.lecture_saved = False
 
-if "current_lecture_filename" not in st.session_state:
-    st.session_state.current_lecture_filename = None
-
 if "input_version" not in st.session_state:
     st.session_state.input_version = 0
 
 if "just_saved_message" not in st.session_state:
     st.session_state.just_saved_message = None
+
+if "current_course_id" not in st.session_state:
+    st.session_state.current_course_id = None
+if "current_lecture_id" not in st.session_state:
+    st.session_state.current_lecture_id = None
 
 
 # --------------------------------------------------
@@ -138,7 +148,8 @@ def confirm_new_lecture():
             st.session_state.transcript = None
             st.session_state.notes = None
             st.session_state.lecture_saved = False
-            st.session_state.current_lecture_filename = None
+            st.session_state.current_course_id = None
+            st.session_state.current_lecture_id = None
 
             st.session_state.input_version += 1
 
@@ -154,7 +165,7 @@ def confirm_delete_lecture(lecture):
 
     st.warning(
         f"Are you sure you want to delete "
-        f"{lecture['course']} - "
+        f"{lecture['courses']['name']} - "
         f"{lecture['title']}?"
     )
 
@@ -180,9 +191,9 @@ def confirm_delete_lecture(lecture):
             use_container_width=True
         ):
 
-            deleted = delete_lecture(
+            deleted = delete_supabase_lecture(
                 CURRENT_USER_ID,
-                lecture["filename"]
+                lecture["id"]
             )
 
             if deleted:
@@ -192,6 +203,8 @@ def confirm_delete_lecture(lecture):
                 st.session_state.transcript = None
                 st.session_state.notes = None
                 st.session_state.lecture_saved = False
+                st.session_state.current_lecture_id = None
+                st.session_state.current_course_id = None
 
                 st.session_state.input_version += 1
 
@@ -212,7 +225,7 @@ def confirm_delete_lecture(lecture):
 # Load lectures
 # --------------------------------------------------
 
-saved_lectures = load_lectures(
+saved_lectures = get_lectures(
     CURRENT_USER_ID
 )
 
@@ -256,6 +269,7 @@ if st.sidebar.button(
     use_container_width=True
 ):
     confirm_new_lecture()
+    
 
 
 # Group lectures by course
@@ -263,7 +277,7 @@ courses = {}
 
 for lecture in saved_lectures:
 
-    course = lecture["course"].strip()
+    course = lecture["courses"]["name"].strip()
 
     if not course:
         course = "Uncategorized"
@@ -301,13 +315,13 @@ if courses:
                         "Open",
                         key=(
                             f"open_"
-                            f"{lecture['filename']}"
+                            f"{lecture['id']}"
                         ),
                         use_container_width=True
                     ):
 
                         st.session_state.course_name = (
-                            lecture["course"]
+                            lecture["courses"]["name"]
                         )
 
                         st.session_state.lecture_title = (
@@ -324,7 +338,13 @@ if courses:
 
                         st.session_state.lecture_saved = True
 
-                        st.session_state.current_lecture_filename = lecture["filename"]
+                        st.session_state.current_lecture_id = (
+                            lecture["id"]
+                        )
+
+                        st.session_state.current_course_id = (
+                            lecture["course_id"]
+                        )
 
                         st.session_state.input_version += 1
 
@@ -336,7 +356,7 @@ if courses:
                         "🗑️",
                         key=(
                             f"delete_"
-                            f"{lecture['filename']}"
+                            f"{lecture['id']}"
                         ),
                         help="Delete lecture",
                         use_container_width=True
@@ -419,12 +439,15 @@ st.subheader(
 # Course selection
 # --------------------------------------------------
 
+supabase_courses = get_courses(
+    CURRENT_USER_ID
+)
+
 existing_courses = sorted(
-    {
-        lecture["course"].strip()
-        for lecture in saved_lectures
-        if lecture["course"].strip()
-    }
+    [
+        course["name"]
+        for course in supabase_courses
+    ]
 )
 
 
@@ -471,23 +494,49 @@ if selected_course == "+ Create new course":
         "New course name",
         value=(
             st.session_state.course_name
-            if (
-                st.session_state.course_name
-                not in existing_courses
-            )
+            if st.session_state.course_name not in existing_courses
             else ""
         ),
         placeholder="e.g. CSE 109"
     )
 
-    st.session_state.course_name = (
-        new_course_name.strip()
-    )
+    new_course_name = new_course_name.strip()
+
+    if new_course_name:
+
+        if st.button("Create Course"):
+
+            course = get_or_create_course(
+                CURRENT_USER_ID,
+                new_course_name
+            )
+
+            st.session_state.course_name = (
+                course["name"]
+            )
+            st.session_state.current_course_id = (
+                course["id"]
+            )
+            
+
+            st.session_state.input_version += 1
+
+            st.rerun()
 
 else:
 
     st.session_state.course_name = (
         selected_course
+    )
+
+    selected_course_data = next(
+        course
+        for course in supabase_courses
+        if course["name"] == selected_course
+    )
+
+    st.session_state.current_course_id = (
+        selected_course_data["id"]
     )
 
 
@@ -732,7 +781,7 @@ if (
 
     if not st.session_state.lecture_saved:
 
-        if st.session_state.current_lecture_filename:
+        if st.session_state.current_lecture_id:
             button_text = "Save Changes"
         else:
             button_text = "Save Lecture"
@@ -741,6 +790,7 @@ if (
             button_text,
             type="primary"
         ):
+
             if not st.session_state.course_name:
                 st.warning(
                     "Choose or create a course first."
@@ -753,11 +803,11 @@ if (
 
             else:
 
-                if st.session_state.current_lecture_filename:
-                    update_lecture(
+                if st.session_state.current_lecture_id:
+                    update_supabase_lecture(
                         CURRENT_USER_ID,
-                        st.session_state.current_lecture_filename,
-                        st.session_state.course_name,
+                        st.session_state.current_lecture_id,
+                        st.session_state.current_course_id,
                         st.session_state.lecture_title,
                         st.session_state.transcript,
                         st.session_state.notes
@@ -768,15 +818,17 @@ if (
                     )
 
                 else:
-                    filename = save_lecture(
+                    lecture = create_lecture(
                         CURRENT_USER_ID,
-                        st.session_state.course_name,
+                        st.session_state.current_course_id,
                         st.session_state.lecture_title,
                         st.session_state.transcript,
                         st.session_state.notes
                     )
 
-                    st.session_state.current_lecture_filename = filename
+                    st.session_state.current_lecture_id = (
+                        lecture["id"]
+                    )
 
                     st.session_state.just_saved_message = (
                         "Lecture saved successfully."
