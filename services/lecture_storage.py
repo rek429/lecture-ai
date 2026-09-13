@@ -19,8 +19,7 @@ def save_lecture(
     course_name,
     lecture_title,
     transcript,
-    notes
-):
+    notes):
     lecture_dir = get_lecture_dir(user_id)
 
     os.makedirs(
@@ -66,14 +65,13 @@ def save_lecture(
         "w",
         encoding="utf-8"
     ) as file:
-
         json.dump(
             lecture_data,
             file,
             indent=4
         )
 
-    return file_path
+    return filename
 
 
 def load_lectures(user_id):
@@ -89,7 +87,6 @@ def load_lectures(user_id):
     for filename in os.listdir(
         lecture_dir
     ):
-
         if not filename.endswith(".json"):
             continue
 
@@ -103,7 +100,6 @@ def load_lectures(user_id):
             "r",
             encoding="utf-8"
         ) as file:
-
             lecture_data = json.load(file)
 
         lecture_data["filename"] = filename
@@ -118,3 +114,69 @@ def load_lectures(user_id):
     )
 
     return lectures
+
+
+def delete_lecture(user_id, filename):
+    lecture_dir = get_lecture_dir(user_id)
+
+    file_path = os.path.join(
+        lecture_dir,
+        filename
+    )
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
+        return True
+
+    return False
+
+
+def update_lecture(
+    user_id,
+    filename,
+    course_name,
+    lecture_title,
+    transcript,
+    notes):
+    lecture_dir = get_lecture_dir(user_id)
+
+    file_path = os.path.join(
+        lecture_dir,
+        filename
+    )
+
+    created_at = datetime.now().isoformat()
+
+    if os.path.exists(file_path):
+        with open(
+            file_path,
+            "r",
+            encoding="utf-8"
+        ) as file:
+            existing_data = json.load(file)
+
+        created_at = existing_data.get(
+            "created_at",
+            created_at
+        )
+
+    lecture_data = {
+        "course": course_name,
+        "title": lecture_title,
+        "transcript": transcript,
+        "notes": notes,
+        "created_at": created_at
+    }
+
+    with open(
+        file_path,
+        "w",
+        encoding="utf-8"
+    ) as file:
+        json.dump(
+            lecture_data,
+            file,
+            indent=4
+        )
+
+    return filename
