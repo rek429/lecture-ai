@@ -37,3 +37,33 @@ def save_lecture(course_name, lecture_title, transcript, notes):
         )
 
     return file_path
+
+
+def load_lectures():
+    os.makedirs(LECTURE_DIR, exist_ok=True)
+
+    lectures = []
+
+    for filename in os.listdir(LECTURE_DIR):
+
+        if not filename.endswith(".json"):
+            continue
+
+        file_path = os.path.join(
+            LECTURE_DIR,
+            filename
+        )
+
+        with open(file_path, "r", encoding="utf-8") as file:
+            lecture_data = json.load(file)
+
+        lecture_data["filename"] = filename
+
+        lectures.append(lecture_data)
+
+    lectures.sort(
+        key=lambda lecture: lecture["created_at"],
+        reverse=True
+    )
+
+    return lectures
