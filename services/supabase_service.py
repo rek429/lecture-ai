@@ -216,3 +216,44 @@ def delete_supabase_lecture(
     )
 
     return response.data
+
+def save_chat_message(
+    user_id,
+    lecture_id,
+    role,
+    content
+):
+    response = run_with_retry(
+        lambda: (
+            supabase
+            .table("chat_messages")
+            .insert({
+                "user_id": user_id,
+                "lecture_id": lecture_id,
+                "role": role,
+                "content": content
+            })
+            .execute()
+        )
+    )
+
+    return response.data[0]
+
+
+def get_chat_messages(
+    user_id,
+    lecture_id
+):
+    response = run_with_retry(
+        lambda: (
+            supabase
+            .table("chat_messages")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("lecture_id", lecture_id)
+            .order("created_at")
+            .execute()
+        )
+    )
+
+    return response.data

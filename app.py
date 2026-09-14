@@ -10,8 +10,11 @@ from services.supabase_service import (
     create_lecture,
     get_lectures,
     update_supabase_lecture,
-    delete_supabase_lecture
+    delete_supabase_lecture,
+    save_chat_message,
+    get_chat_messages
 )
+
 
 
 st.set_page_config(
@@ -715,38 +718,77 @@ if st.session_state.transcript:
     # ----------------------------------------------
     # Chat tab
     # ----------------------------------------------
-
     with chat_tab:
 
-        question = st.text_input(
-            "Ask a question about this lecture"
-        )
+        if not st.session_state.current_lecture_id:
 
-        if st.button(
-            "Ask Lecture"
-        ):
+            st.info(
+                "Save this lecture before using persistent chat."
+            )
 
-            if question.strip():
+        else:
 
-                with st.spinner(
-                    "Thinking..."
+            chat_messages = get_chat_messages(
+                CURRENT_USER_ID,
+                st.session_state.current_lecture_id
+            )
+
+            for message in chat_messages:
+
+                with st.chat_message(
+                    message["role"]
                 ):
+                    st.markdown(
+                        message["content"]
+                    )
+            if st.session_state.get("clear_chat_question"):
+                st.session_state.chat_question = ""
+                st.session_state.clear_chat_question = False
+                
 
-                    answer = ask_lecture(
-                        st.session_state.transcript,
+            question = st.text_input(
+                "Ask a question about this lecture",
+                key="chat_question"
+            )
+
+            if st.button(
+                "Ask Lecture"
+            ):
+
+                if question.strip():
+
+                    save_chat_message(
+                        CURRENT_USER_ID,
+                        st.session_state.current_lecture_id,
+                        "user",
                         question
                     )
 
-                st.markdown(
-                    answer
-                )
+                    with st.spinner(
+                        "Thinking..."
+                    ):
 
-            else:
+                        answer = ask_lecture(
+                            st.session_state.transcript,
+                            question
+                        )
 
-                st.warning(
-                    "Enter a question first."
-                )
+                    save_chat_message(
+                        CURRENT_USER_ID,
+                        st.session_state.current_lecture_id,
+                        "assistant",
+                        answer
+                    )
 
+                    st.session_state.clear_chat_question = True
+
+                    st.rerun()
+
+                else:
+
+                    st.warning(
+                        "Enter a question first."
+                    )
 
     # ----------------------------------------------
     # Generate notes
