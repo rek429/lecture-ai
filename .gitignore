@@ -8,3 +8,4 @@ data/lectures/*.json
 data/users/*/lectures/*.json
 .streamlit/secrets.toml
 data/users/
+terminal_history.txt
