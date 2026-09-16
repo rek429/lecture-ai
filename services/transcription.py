@@ -9,17 +9,23 @@ model = WhisperModel(
 )
 
 def transcribe_audio(audio_file):
+    if isinstance(audio_file, bytes):
+        audio_bytes = audio_file
+    else:
+        audio_bytes = audio_file.getvalue()
+
     with tempfile.NamedTemporaryFile(
         delete=False,
         suffix=".wav"
     ) as temp_file:
-        temp_file.write(audio_file.getvalue())
+        temp_file.write(audio_bytes)
         temp_path = temp_file.name
 
     try:
         segments, info = model.transcribe(
             temp_path,
-            beam_size=5
+            beam_size=1,
+            vad_filter=True
         )
 
         transcript = ""

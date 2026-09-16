@@ -20,7 +20,8 @@ supabase = create_client(
     SUPABASE_URL,
     SUPABASE_SECRET_KEY
 )
-def run_with_retry(action, attempts=3, delay=1):
+
+def run_read_with_retry(action, attempts=3, delay=1):
     last_error = None
 
     for attempt in range(attempts):
@@ -39,7 +40,7 @@ def get_or_create_user(
     google_sub,
     email
 ):
-    response = run_with_retry(
+    response = run_read_with_retry(
         lambda: (
             supabase
             .table("users")
@@ -52,22 +53,20 @@ def get_or_create_user(
     if response.data:
         return response.data[0]
 
-    response = run_with_retry(
-        lambda: (
-            supabase
-            .table("users")
-            .insert({
-                "google_sub": google_sub,
-                "email": email
-            })
-            .execute()
-        )
+    response = (
+        supabase
+        .table("users")
+        .insert({
+            "google_sub": google_sub,
+            "email": email
+        })
+        .execute()
     )
 
     return response.data[0]
 
 def get_courses(user_id):
-    response = run_with_retry(
+    response = run_read_with_retry(
         lambda: (
             supabase
             .table("courses")
@@ -85,7 +84,7 @@ def get_or_create_course(
     user_id,
     course_name
 ):
-    response = run_with_retry(
+    response = run_read_with_retry(
         lambda: (
             supabase
             .table("courses")
@@ -99,19 +98,18 @@ def get_or_create_course(
     if response.data:
         return response.data[0]
 
-    response = run_with_retry(
-        lambda: (
-            supabase
-            .table("courses")
-            .insert({
-                "user_id": user_id,
-                "name": course_name
-            })
-            .execute()
-        )
+    response = (
+        supabase
+        .table("courses")
+        .insert({
+            "user_id": user_id,
+            "name": course_name
+        })
+        .execute()
     )
 
     return response.data[0]
+
 def create_lecture(
     user_id,
     course_id,
@@ -119,26 +117,23 @@ def create_lecture(
     transcript,
     notes
 ):
-    response = run_with_retry(
-        lambda: (
-            supabase
-            .table("lectures")
-            .insert({
-                "user_id": user_id,
-                "course_id": course_id,
-                "title": title,
-                "transcript": transcript,
-                "notes": notes
-            })
-            .execute()
-        )
+    response = (
+        supabase
+        .table("lectures")
+        .insert({
+            "user_id": user_id,
+            "course_id": course_id,
+            "title": title,
+            "transcript": transcript,
+            "notes": notes
+        })
+        .execute()
     )
 
     return response.data[0]
 
-
 def get_lectures(user_id):
-    response = run_with_retry(
+    response = run_read_with_retry(
         lambda: (
             supabase
             .table("lectures")
@@ -168,51 +163,46 @@ def update_supabase_lecture(
     transcript,
     notes
 ):
-    response = run_with_retry(
-        lambda: (
-            supabase
-            .table("lectures")
-            .update({
-                "course_id": course_id,
-                "title": title,
-                "transcript": transcript,
-                "notes": notes,
-                "updated_at": datetime.now().isoformat()
-            })
-            .eq(
-                "id",
-                lecture_id
-            )
-            .eq(
-                "user_id",
-                user_id
-            )
-            .execute()
+    response = (
+        supabase
+        .table("lectures")
+        .update({
+            "course_id": course_id,
+            "title": title,
+            "transcript": transcript,
+            "notes": notes,
+            "updated_at": datetime.now().isoformat()
+        })
+        .eq(
+            "id",
+            lecture_id
         )
+        .eq(
+            "user_id",
+            user_id
+        )
+        .execute()
     )
 
     return response.data[0]
-
 
 def delete_supabase_lecture(
     user_id,
     lecture_id
 ):
-    response = run_with_retry(
-        lambda: (
-            supabase
-            .table("lectures")
-            .delete()
-            .eq(
-                "id",
-                lecture_id
-            )
-            .eq(
-                "user_id",
-                user_id
-            )
-            .execute()
+    response = (
+        supabase
+        .table("lectures")
+        .delete()
+        .eq(
+            "id",
+            lecture_id
         )
+        .eq(
+            "user_id",
+            user_id
+        )
+        .execute()
     )
 
     return response.data
@@ -223,18 +213,16 @@ def save_chat_message(
     role,
     content
 ):
-    response = run_with_retry(
-        lambda: (
-            supabase
-            .table("chat_messages")
-            .insert({
-                "user_id": user_id,
-                "lecture_id": lecture_id,
-                "role": role,
-                "content": content
-            })
-            .execute()
-        )
+    response = (
+        supabase
+        .table("chat_messages")
+        .insert({
+            "user_id": user_id,
+            "lecture_id": lecture_id,
+            "role": role,
+            "content": content
+        })
+        .execute()
     )
 
     return response.data[0]
@@ -244,7 +232,7 @@ def get_chat_messages(
     user_id,
     lecture_id
 ):
-    response = run_with_retry(
+    response = run_read_with_retry(
         lambda: (
             supabase
             .table("chat_messages")
@@ -257,3 +245,85 @@ def get_chat_messages(
     )
 
     return response.data
+def upload_lecture_audio(user_id, lecture_id, audio_bytes, file_extension="wav"):
+    audio_path = f"{user_id}/{lecture_id}/lecture.{file_extension}"
+
+    supabase.storage.from_("lecture-audio").upload(
+        path=audio_path,
+        file=audio_bytes,
+        file_options={
+            "content-type": f"audio/{file_extension}",
+            "upsert": "true",
+        },
+    )
+
+    return audio_path
+
+
+def download_lecture_audio(audio_path):
+    return supabase.storage.from_("lecture-audio").download(audio_path)
+
+
+def delete_lecture_audio(audio_path):
+    if audio_path:
+        supabase.storage.from_("lecture-audio").remove([audio_path])
+
+def create_audio_lecture(user_id, course_id, title):
+    response = (
+        supabase.table("lectures")
+        .insert({
+            "user_id": user_id,
+            "course_id": course_id,
+            "title": title,
+            "transcript": None,
+            "notes": None,
+            "audio_path": None,
+        })
+        .execute()
+    )
+
+    return response.data[0]
+
+
+def update_lecture_audio_path(user_id, lecture_id, audio_path):
+    response = (
+        supabase.table("lectures")
+        .update({
+            "audio_path": audio_path,
+        })
+        .eq("id", lecture_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    return response.data[0]
+
+
+def update_lecture_transcript(user_id, lecture_id, transcript):
+    response = (
+        supabase.table("lectures")
+        .update({
+            "transcript": transcript,
+            "updated_at": datetime.now().isoformat(),
+        })
+        .eq("id", lecture_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    return response.data[0]
+
+
+def update_lecture_notes(user_id, lecture_id, notes):
+    response = (
+        supabase.table("lectures")
+        .update({
+            "notes": notes,
+            "updated_at": datetime.now().isoformat(),
+        })
+        .eq("id", lecture_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    return response.data[0]

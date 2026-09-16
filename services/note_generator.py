@@ -1,4 +1,5 @@
 from google import genai
+from google.genai import errors
 from dotenv import load_dotenv
 import os
 
@@ -7,6 +8,7 @@ load_dotenv()
 client = genai.Client(
     api_key=os.getenv("GEMINI_API_KEY")
 )
+
 
 def generate_notes(transcript):
     prompt = f"""
@@ -57,10 +59,18 @@ LECTURE TRANSCRIPT:
 {transcript}
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.6-flash",
+            contents=prompt
+        )
 
-    return response.text
- 
+        return response.text
+
+    except errors.ServerError as error:
+        if error.code == 503:
+            raise RuntimeError(
+                "Gemini is temporarily busy. Please try generating notes again in a moment."
+            ) from error
+
+        raise
