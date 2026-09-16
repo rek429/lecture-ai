@@ -1,4 +1,5 @@
 import streamlit as st
+from utils.session_state import initialize_session_state
 from services.chat_service import ask_lecture
 from services.transcription import transcribe_audio
 from services.note_generator import generate_notes
@@ -58,43 +59,8 @@ CURRENT_USER_ID = current_user["id"]
 
 
  # Session state
- 
-if "transcript" not in st.session_state:
-    st.session_state.transcript = None
 
-if "notes" not in st.session_state:
-    st.session_state.notes = None
-
-if "course_name" not in st.session_state:
-    st.session_state.course_name = ""
-
-if "lecture_title" not in st.session_state:
-    st.session_state.lecture_title = ""
-
-if "lecture_saved" not in st.session_state:
-    st.session_state.lecture_saved = False
-
-if "input_version" not in st.session_state:
-    st.session_state.input_version = 0
-
-if "course_version" not in st.session_state:
-    st.session_state.course_version = 0
-
-if "just_saved_message" not in st.session_state:
-    st.session_state.just_saved_message = None
-
-if "current_course_id" not in st.session_state:
-    st.session_state.current_course_id = None
-
-if "current_lecture_id" not in st.session_state:
-    st.session_state.current_lecture_id = None
-
-if "recorded_audio" not in st.session_state:
-    st.session_state.recorded_audio = None
-
-if "audio_saved" not in st.session_state:
-    st.session_state.audio_saved = False
-
+initialize_session_state()
 
  # One-time messages
  
@@ -954,38 +920,38 @@ if st.session_state.transcript:
     # Generate notes
     # ----------------------------------------------
 
-   if st.button(
-    "Generate Notes"
-):
+    if st.button(
+        "Generate Notes"
+    ):
 
-    try:
-        with st.spinner(
-            "Generating study notes..."
-        ):
+        try:
+            with st.spinner(
+                "Generating study notes..."
+            ):
 
-            new_notes = generate_notes(
-                st.session_state.transcript
+                new_notes = generate_notes(
+                    st.session_state.transcript
+                )
+
+            # Save the generated notes before updating
+            # the interface.
+            update_lecture_notes(
+                CURRENT_USER_ID,
+                st.session_state.current_lecture_id,
+                new_notes
             )
 
-        # Save the generated notes before updating
-        # the interface.
-        update_lecture_notes(
-            CURRENT_USER_ID,
-            st.session_state.current_lecture_id,
-            new_notes
-        )
+            st.session_state.notes = new_notes
+            st.session_state.lecture_saved = True
 
-        st.session_state.notes = new_notes
-        st.session_state.lecture_saved = True
+            st.rerun()
 
-        st.rerun()
-
-    except RuntimeError as error:
-        st.warning(
-            "Gemini is temporarily busy. "
-            "Your lecture and transcript are safe. "
-            "Please try generating notes again in a moment."
-        )
+        except RuntimeError as error:
+            st.warning(
+                "Gemini is temporarily busy. "
+                "Your lecture and transcript are safe. "
+                "Please try generating notes again in a moment."
+            )
 
 
     # ----------------------------------------------
