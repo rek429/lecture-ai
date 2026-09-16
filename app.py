@@ -1,10 +1,11 @@
 import streamlit as st
 from utils.session_state import initialize_session_state
-from services.chat_service import ask_lecture
 from services.transcription import transcribe_audio
-from services.note_generator import generate_notes
 from components.sidebar import render_sidebar
 from components.lecture_form import render_lecture_form
+from components.sidebar import render_sidebar
+from components.lecture_form import render_lecture_form
+from components.lecture_workspace import render_lecture_workspace
 
 from services.supabase_service import (
     get_or_create_user,
@@ -14,15 +15,12 @@ from services.supabase_service import (
     get_lectures,
     update_supabase_lecture,
     delete_supabase_lecture,
-    save_chat_message,
-    get_chat_messages,
     create_audio_lecture,
     upload_lecture_audio,
     update_lecture_audio_path,
     download_lecture_audio,
     delete_lecture_audio,
     update_lecture_transcript,
-    update_lecture_notes,
 )
 
 
@@ -395,171 +393,10 @@ if selected_audio:
             st.rerun()
 
  # Lecture workspace
- 
-if st.session_state.transcript:
 
-    st.divider()
-
-    st.subheader(
-        st.session_state.lecture_title
-    )
-
-    st.caption(
-        st.session_state.course_name
-    )
-
-
-    transcript_tab, notes_tab, chat_tab = st.tabs(
-        [
-            "Transcript",
-            "Lecture Notes",
-            "Chat"
-        ]
-    )
-
-
-    # ----------------------------------------------
-    # Transcript tab
-    # ----------------------------------------------
-
-    with transcript_tab:
-
-        st.write(
-            st.session_state.transcript
-        )
-
-
-    # ----------------------------------------------
-    # Notes tab
-    # ----------------------------------------------
-
-    with notes_tab:
-
-        if st.session_state.notes:
-
-            st.markdown(
-                st.session_state.notes
-            )
-
-        else:
-
-            st.info(
-                "Generate notes to view them here."
-            )
-
-
-    # ----------------------------------------------
-    # Chat tab
-    # ----------------------------------------------
-    with chat_tab:
-
-        if not st.session_state.current_lecture_id:
-
-            st.info(
-                "Save this lecture before using persistent chat."
-            )
-
-        else:
-
-            chat_messages = get_chat_messages(
-                CURRENT_USER_ID,
-                st.session_state.current_lecture_id
-            )
-
-            for message in chat_messages:
-
-                with st.chat_message(
-                    message["role"]
-                ):
-                    st.markdown(
-                        message["content"]
-                    )
-            if st.session_state.get("clear_chat_question"):
-                st.session_state.chat_question = ""
-                st.session_state.clear_chat_question = False
-                
-
-            question = st.text_input(
-                "Ask a question about this lecture",
-                key="chat_question"
-            )
-
-            if st.button(
-                "Ask Lecture"
-            ):
-
-                if question.strip():
-
-                    save_chat_message(
-                        CURRENT_USER_ID,
-                        st.session_state.current_lecture_id,
-                        "user",
-                        question
-                    )
-
-                    with st.spinner(
-                        "Thinking..."
-                    ):
-
-                        answer = ask_lecture(
-                            st.session_state.transcript,
-                            question
-                        )
-
-                    save_chat_message(
-                        CURRENT_USER_ID,
-                        st.session_state.current_lecture_id,
-                        "assistant",
-                        answer
-                    )
-
-                    st.session_state.clear_chat_question = True
-
-                    st.rerun()
-
-                else:
-
-                    st.warning(
-                        "Enter a question first."
-                    )
-
-    # ----------------------------------------------
-    # Generate notes
-    # ----------------------------------------------
-
-    if st.button(
-        "Generate Notes"
-    ):
-
-        try:
-            with st.spinner(
-                "Generating study notes..."
-            ):
-
-                new_notes = generate_notes(
-                    st.session_state.transcript
-                )
-
-            # Save the generated notes before updating
-            # the interface.
-            update_lecture_notes(
-                CURRENT_USER_ID,
-                st.session_state.current_lecture_id,
-                new_notes
-            )
-
-            st.session_state.notes = new_notes
-            st.session_state.lecture_saved = True
-
-            st.rerun()
-
-        except RuntimeError as error:
-            st.warning(
-                "Gemini is temporarily busy. "
-                "Your lecture and transcript are safe. "
-                "Please try generating notes again in a moment."
-            )
-
+render_lecture_workspace(
+    CURRENT_USER_ID
+)
 
     # ----------------------------------------------
     # Save lecture
