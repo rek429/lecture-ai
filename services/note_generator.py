@@ -1,12 +1,11 @@
-from google import genai
-from google.genai import errors
+from groq import Groq
 from dotenv import load_dotenv
 import os
 
 load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
+client = Groq(
+    api_key=os.getenv("GROQ_API_KEY")
 )
 
 
@@ -41,7 +40,12 @@ Mention anything that appears especially emphasized or repeated.
 Identify ideas that may need further clarification.
 
 # Review Questions
-Create 5 questions that test understanding of the lecture.
+Create up to 5 questions that test understanding of the lecture.
+Every question must be answerable using only information explicitly contained
+in the transcript. If the transcript does not contain enough information for
+5 meaningful questions, create fewer questions instead of introducing outside
+knowledge.
+
 
 IMPORTANT:
 - Base the notes strictly on information contained in the transcript.
@@ -53,24 +57,28 @@ IMPORTANT:
 - Preserve technical terminology and examples accurately.
 - Distinguish between what the speaker explicitly said and what is uncertain.
 - Make the notes concise enough to study from while preserving important detail.
-
+- Never introduce a subject, context, example, or explanation that is not
+  supported by the transcript, even if it seems obvious.
 LECTURE TRANSCRIPT:
 
 {transcript}
 """
 
     try:
-        response = client.models.generate_content(
-            model="gemini-3.6-flash",
-            contents=prompt
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
         )
 
-        return response.text
+        return response.choices[0].message.content
 
-    except errors.ServerError as error:
-        if error.code == 503:
-            raise RuntimeError(
-                "Gemini is temporarily busy. Please try generating notes again in a moment."
-            ) from error
-
-        raise
+    except Exception as error:
+        raise RuntimeError(
+            "Note generation is temporarily unavailable. "
+            "Please try again in a moment."
+        ) from error

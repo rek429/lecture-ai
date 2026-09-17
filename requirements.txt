@@ -2,3 +2,4 @@ streamlit
 python-dotenv
 faster-whisper
 google-genai
+groq==1.7.0
