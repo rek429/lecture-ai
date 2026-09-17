@@ -9,9 +9,7 @@ from services.supabase_service import (
     get_or_create_user,
     get_courses,
     get_or_create_course,
-    create_lecture,
     get_lectures,
-    update_supabase_lecture,
     delete_supabase_lecture,
     create_audio_lecture,
     upload_lecture_audio,
@@ -397,87 +395,3 @@ if selected_audio:
 render_lecture_workspace(
     CURRENT_USER_ID
 )
-
-    # ----------------------------------------------
-    # Save lecture
-    # ----------------------------------------------
-if (
-    st.session_state.transcript
-    and st.session_state.notes
-):
-
-    if not st.session_state.lecture_saved:
-
-        if st.session_state.current_lecture_id:
-            button_text = "Save Changes"
-        else:
-            button_text = "Save Lecture"
-
-        if st.button(
-            button_text,
-            type="primary"
-        ):
-
-            if not st.session_state.course_name:
-                st.warning(
-                    "Choose or create a course first."
-                )
-
-            elif not st.session_state.lecture_title:
-                st.warning(
-                    "Enter a lecture title first."
-                )
-
-            else:
-
-                if st.session_state.current_lecture_id:
-                    update_supabase_lecture(
-                        CURRENT_USER_ID,
-                        st.session_state.current_lecture_id,
-                        st.session_state.current_course_id,
-                        st.session_state.lecture_title,
-                        st.session_state.transcript,
-                        st.session_state.notes
-                    )
-
-                    st.session_state.just_saved_message = (
-                        "Changes saved successfully."
-                    )
-
-                else:
-                    lecture = create_lecture(
-                        CURRENT_USER_ID,
-                        st.session_state.current_course_id,
-                        st.session_state.lecture_title,
-                        st.session_state.transcript,
-                        st.session_state.notes
-                    )
-
-                    st.session_state.current_lecture_id = (
-                        lecture["id"]
-                    )
-
-                    st.session_state.just_saved_message = (
-                        "Lecture saved successfully."
-                    )
-
-                st.session_state.lecture_saved = True
-                st.rerun()
-
-    elif st.session_state.get(
-        "just_saved_message"
-    ):
-        st.success(
-            st.session_state.just_saved_message
-        )
-
-        st.session_state.just_saved_message = None
-
-elif (
-    st.session_state.transcript
-    and st.session_state.notes
-    and st.session_state.lecture_saved
-):
-    st.success(
-        "Lecture is already saved."
-    )
