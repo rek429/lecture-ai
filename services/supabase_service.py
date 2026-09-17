@@ -245,15 +245,31 @@ def get_chat_messages(
     )
 
     return response.data
-def upload_lecture_audio(user_id, lecture_id, audio_bytes, file_extension="wav"):
-    audio_path = f"{user_id}/{lecture_id}/lecture.{file_extension}"
 
-    supabase.storage.from_("lecture-audio").upload(
+def upload_lecture_audio(
+    user_id,
+    lecture_id,
+    audio_bytes,
+    file_extension="wav"
+):
+    audio_path = (
+        f"{user_id}/"
+        f"{lecture_id}/"
+        f"lecture.{file_extension}"
+    )
+
+    # A lecture's original recording is permanent.
+    # Never overwrite an existing recording.
+    supabase.storage.from_(
+        "lecture-audio"
+    ).upload(
         path=audio_path,
         file=audio_bytes,
         file_options={
-            "content-type": f"audio/{file_extension}",
-            "upsert": "true",
+            "content-type": (
+                f"audio/{file_extension}"
+            ),
+            "upsert": False,
         },
     )
 
