@@ -1,12 +1,12 @@
-from google import genai
+from groq import Groq
 from dotenv import load_dotenv
 import os
 
 
 load_dotenv()
 
-client = genai.Client(
-    api_key=os.getenv("GEMINI_API_KEY")
+client = Groq(
+    api_key=os.getenv("GROQ_API_KEY")
 )
 
 
@@ -22,6 +22,10 @@ Rules:
 - If the transcript does not contain enough information to answer, say that clearly.
 - Keep the answer clear and concise.
 - Preserve technical terminology from the lecture.
+- Never introduce facts, examples, explanations, or context that are not
+  supported by the transcript.
+- If the student's question requires information outside the transcript,
+  explicitly say that the lecture did not provide that information.
 
 LECTURE TRANSCRIPT:
 
@@ -32,9 +36,21 @@ STUDENT QUESTION:
 {question}
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-120b",
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+        )
 
-    return response.text
+        return response.choices[0].message.content
+
+    except Exception as error:
+        raise RuntimeError(
+            "Lecture chat is temporarily unavailable. "
+            "Please try again in a moment."
+        ) from error
