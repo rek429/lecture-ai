@@ -4,6 +4,7 @@ from components.sidebar import render_sidebar
 from components.lecture_form import render_lecture_form
 from components.lecture_workspace import render_lecture_workspace
 from components.transcription import render_transcription
+from utils.lecture_state import restore_lecture_from_url
 from components.lecture_dialogs import (
     confirm_new_lecture,
     confirm_delete_lecture,
@@ -11,7 +12,6 @@ from components.lecture_dialogs import (
 from services.supabase_service import (
     get_or_create_user,
     get_lectures,
-    download_lecture_audio,
     delete_lecture_audio,
 )
 
@@ -85,71 +85,9 @@ saved_lectures = get_lectures(
     CURRENT_USER_ID
 )
 # Restore the lecture from the URL after a browser refresh.
-lecture_id_from_url = st.query_params.get("lecture")
-
-if (
-    lecture_id_from_url
-    and st.session_state.current_lecture_id != lecture_id_from_url
-):
-    lecture_from_url = next(
-        (
-            lecture
-            for lecture in saved_lectures
-            if lecture["id"] == lecture_id_from_url
-        ),
-        None
-    )
-
-    if lecture_from_url:
-        st.session_state.course_name = (
-            lecture_from_url["courses"]["name"]
-        )
-
-        st.session_state.lecture_title = (
-            lecture_from_url["title"]
-        )
-
-        st.session_state.transcript = (
-            lecture_from_url["transcript"]
-        )
-
-        st.session_state.notes = (
-            lecture_from_url["notes"]
-        )
-
-        st.session_state.current_lecture_id = (
-            lecture_from_url["id"]
-        )
-
-        st.session_state.current_course_id = (
-            lecture_from_url["course_id"]
-        )
-
-        st.session_state.lecture_saved = True
-        st.session_state.course_version += 1
-
-
-        if lecture_from_url.get("audio_path"):
-            try:
-                st.session_state.recorded_audio = (
-                    download_lecture_audio(
-                        lecture_from_url["audio_path"]
-                    )
-                )
-
-                st.session_state.audio_saved = True
-
-            except Exception:
-                st.session_state.recorded_audio = None
-                st.session_state.audio_saved = False
-
-        else:
-            st.session_state.recorded_audio = None
-            st.session_state.audio_saved = False
-
-    else:
-        # Invalid/deleted lecture ID should not remain in the URL.
-        st.query_params.clear()
+restore_lecture_from_url(
+    saved_lectures
+)
 
 
  # Sidebar
