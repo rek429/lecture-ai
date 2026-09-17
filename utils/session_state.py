@@ -15,6 +15,7 @@ def initialize_session_state():
         "current_lecture_id": None,
         "recorded_audio": None,
         "audio_saved": False,
+        "audio_fingerprint": None,
     }
 
     for key, value in defaults.items():

@@ -1,5 +1,5 @@
+import hashlib
 import streamlit as st
-
 from services.supabase_service import (
     get_courses,
     get_or_create_course,
@@ -10,9 +10,10 @@ from services.supabase_service import (
 
 
 def render_lecture_form(user_id):
-    st.subheader(
-        "New Lecture"
-    )
+    if not st.session_state.current_lecture_id:
+        st.subheader(
+            "New Lecture"
+        )
 
     # ----------------------------------------------
     # Course selection
@@ -143,7 +144,23 @@ def render_lecture_form(user_id):
     st.subheader(
         "Audio"
     )
+    # Existing lecture: show its saved recording.
+    if (
+        st.session_state.current_lecture_id
+        and st.session_state.audio_saved
+        and st.session_state.recorded_audio
+    ):
+        st.audio(
+            st.session_state.recorded_audio
+        )
 
+        selected_audio = (
+            st.session_state.recorded_audio
+        )
+
+        return selected_audio
+
+    # New lecture: allow recording or uploading.
     audio = st.audio_input(
         "Record lecture",
         key=(
@@ -168,48 +185,61 @@ def render_lecture_form(user_id):
     selected_audio = None
 
     if audio:
+        audio_bytes = audio.getvalue()
 
-        # Only treat it as new audio if it is different
-        # from the recording currently in session state.
+        new_fingerprint = hashlib.sha256(
+            audio_bytes
+        ).hexdigest()
+
         if (
-            st.session_state.recorded_audio is None
-            or audio.name != st.session_state.recorded_audio.name
+            new_fingerprint
+            != st.session_state.audio_fingerprint
         ):
+            # A genuinely new recording was made.
             st.session_state.recorded_audio = audio
+            st.session_state.audio_fingerprint = new_fingerprint
             st.session_state.audio_saved = False
-
-        st.audio(
-            st.session_state.recorded_audio
-        )
 
         selected_audio = (
             st.session_state.recorded_audio
+        )
+
+        st.audio(
+            selected_audio
         )
 
     elif uploaded_audio:
+        audio_bytes = uploaded_audio.getvalue()
 
-        st.session_state.recorded_audio = (
-            uploaded_audio
-        )
+        new_fingerprint = hashlib.sha256(
+            audio_bytes
+        ).hexdigest()
 
-        st.audio(
-            st.session_state.recorded_audio
-        )
+        if (
+            new_fingerprint
+            != st.session_state.audio_fingerprint
+        ):
+            # A genuinely new file was uploaded.
+            st.session_state.recorded_audio = uploaded_audio
+            st.session_state.audio_fingerprint = new_fingerprint
+            st.session_state.audio_saved = False
 
         selected_audio = (
             st.session_state.recorded_audio
+        )
+
+        st.audio(
+            selected_audio
         )
 
     elif st.session_state.recorded_audio:
-
-        st.audio(
-            st.session_state.recorded_audio
-        )
-
         selected_audio = (
             st.session_state.recorded_audio
         )
 
+        st.audio(
+            selected_audio
+        )
     # ----------------------------------------------
     # Automatic audio save
     # ----------------------------------------------

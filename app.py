@@ -3,8 +3,6 @@ from utils.session_state import initialize_session_state
 from services.transcription import transcribe_audio
 from components.sidebar import render_sidebar
 from components.lecture_form import render_lecture_form
-from components.sidebar import render_sidebar
-from components.lecture_form import render_lecture_form
 from components.lecture_workspace import render_lecture_workspace
 
 from services.supabase_service import (
@@ -130,6 +128,7 @@ def confirm_new_lecture():
             st.session_state.current_lecture_id = None
             st.session_state.recorded_audio = None
             st.session_state.audio_saved = False
+            st.session_state.audio_fingerprint = None
 
 
             st.session_state.input_version += 1
@@ -192,6 +191,7 @@ def confirm_delete_lecture(lecture):
                 st.session_state.current_course_id = None
                 st.session_state.recorded_audio = None
                 st.session_state.audio_saved = False
+                st.session_state.audio_fingerprint = None
 
                 
                 st.session_state.input_version += 1
