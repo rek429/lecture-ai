@@ -8,7 +8,10 @@ model = WhisperModel(
     compute_type="int8"
 )
 
-def transcribe_audio(audio_file):
+def transcribe_audio(
+    audio_file,
+    file_extension="wav"
+):
     if isinstance(audio_file, bytes):
         audio_bytes = audio_file
     else:
@@ -16,7 +19,7 @@ def transcribe_audio(audio_file):
 
     with tempfile.NamedTemporaryFile(
         delete=False,
-        suffix=".wav"
+        suffix=f".{file_extension}"
     ) as temp_file:
         temp_file.write(audio_bytes)
         temp_path = temp_file.name
@@ -32,7 +35,7 @@ def transcribe_audio(audio_file):
 
         for segment in segments:
             transcript += segment.text + " "
-
+    
         return transcript.strip()
 
     finally:

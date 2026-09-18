@@ -56,10 +56,18 @@ def restore_lecture_from_url(saved_lectures):
 
     if lecture_from_url.get("audio_path"):
         try:
+            audio_path = lecture_from_url["audio_path"]
+
             st.session_state.recorded_audio = (
                 download_lecture_audio(
-                    lecture_from_url["audio_path"]
+                    audio_path
                 )
+            )
+
+            st.session_state.audio_extension = (
+                audio_path
+                .rsplit(".", 1)[-1]
+                .lower()
             )
 
             st.session_state.audio_saved = True

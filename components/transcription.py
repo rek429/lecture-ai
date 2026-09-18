@@ -28,10 +28,12 @@ def render_transcription(user_id, selected_audio):
             return
 
         with st.spinner(
-            "Transcribing locally..."
+            "Transcribing..."
         ):
             new_transcript = transcribe_audio(
-                selected_audio
+                selected_audio,
+                st.session_state.audio_extension
+
             )
 
         # Save the new transcript.
