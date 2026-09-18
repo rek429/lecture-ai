@@ -313,6 +313,7 @@ def render_lecture_form(user_id):
 
                 st.session_state.audio_saved = True
                 st.session_state.lecture_saved = True
+                st.query_params["lecture"] = lecture_id
 
                 st.success(
                     "Recording saved automatically."
