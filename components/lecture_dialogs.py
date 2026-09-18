@@ -1,7 +1,9 @@
 import streamlit as st
 
-from services.supabase_service import delete_supabase_lecture
-
+from services.supabase_service import (
+    delete_supabase_lecture,
+    delete_lecture_audio,
+)
 
 @st.dialog("Start a new lecture?")
 def confirm_new_lecture():
@@ -83,10 +85,27 @@ def confirm_delete_lecture(user_id, lecture):
             type="primary",
             use_container_width=True
         ):
-            deleted = delete_supabase_lecture(
-                user_id,
-                lecture["id"]
+            audio_path = lecture.get(
+                "audio_path"
             )
+
+            try:
+                if audio_path:
+                    delete_lecture_audio(
+                        audio_path
+                    )
+
+                deleted = delete_supabase_lecture(
+                    user_id,
+                    lecture["id"]
+                )
+
+            except Exception:
+                st.error(
+                    "The lecture could not be deleted. "
+                    "Please try again."
+                )
+                return
 
             if deleted:
                 st.session_state.course_name = ""
