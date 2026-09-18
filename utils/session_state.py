@@ -16,6 +16,7 @@ def initialize_session_state():
         "recorded_audio": None,
         "audio_saved": False,
         "audio_fingerprint": None,
+        "audio_extension": "wav",
     }
 
     for key, value in defaults.items():

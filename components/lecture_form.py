@@ -6,6 +6,8 @@ from services.supabase_service import (
     create_audio_lecture,
     upload_lecture_audio,
     update_lecture_audio_path,
+    delete_supabase_lecture,
+    delete_lecture_audio,
 )
 
 
@@ -159,6 +161,19 @@ def render_lecture_form(user_id):
         )
 
         return selected_audio
+    
+    # Require lecture information before accepting audio.
+    if (
+        not st.session_state.course_name
+        or not st.session_state.lecture_title.strip()
+    ):
+        st.info(
+            "Choose a course and enter a lecture title "
+            "before recording or uploading audio."
+        )
+
+        return None
+
 
     # New lecture: allow recording or uploading.
     audio = st.audio_input(
@@ -185,6 +200,7 @@ def render_lecture_form(user_id):
     selected_audio = None
 
     if audio:
+        st.session_state.audio_extension = "wav"
         audio_bytes = audio.getvalue()
 
         new_fingerprint = hashlib.sha256(
@@ -209,6 +225,11 @@ def render_lecture_form(user_id):
         )
 
     elif uploaded_audio:
+        st.session_state.audio_extension = (
+            uploaded_audio.name
+            .rsplit(".", 1)[-1]
+            .lower()
+        )
         audio_bytes = uploaded_audio.getvalue()
 
         new_fingerprint = hashlib.sha256(
@@ -252,6 +273,9 @@ def render_lecture_form(user_id):
             st.session_state.course_name
             and st.session_state.lecture_title
         ):
+            lecture_id = None
+            audio_path = None
+
             try:
                 course = get_or_create_course(
                     user_id,
@@ -270,7 +294,7 @@ def render_lecture_form(user_id):
                     user_id,
                     lecture_id,
                     selected_audio.getvalue(),
-                    "wav"
+                    st.session_state.audio_extension
                 )
 
                 update_lecture_audio_path(
@@ -295,6 +319,23 @@ def render_lecture_form(user_id):
                 )
 
             except Exception:
+                if audio_path:
+                    try:
+                        delete_lecture_audio(
+                            audio_path
+                        )
+                    except Exception:
+                        pass
+
+                if lecture_id:
+                    try:
+                        delete_supabase_lecture(
+                            user_id,
+                            lecture_id
+                        )
+                    except Exception:
+                        pass
+
                 st.error(
                     "The recording could not be saved. "
                     "Keep this page open and try again."
