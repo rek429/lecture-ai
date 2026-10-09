@@ -1,6 +1,6 @@
 import streamlit as st
 
-from services.transcription import transcribe_audio
+from services.transcription_manager import transcribe_lecture
 from services.supabase_service import (
     update_lecture_transcript,
     update_lecture_notes,
@@ -30,7 +30,7 @@ def render_transcription(user_id, selected_audio):
         with st.spinner(
             "Transcribing..."
         ):
-            new_transcript = transcribe_audio(
+            new_transcript = transcribe_lecture(
                 selected_audio,
                 st.session_state.audio_extension
 
