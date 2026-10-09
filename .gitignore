@@ -10,3 +10,6 @@ data/users/*/lectures/*.json
 data/users/
 terminal_history.txt
 arcitect.txt
+# Local audio test files
+test_audio.*
+compressed_test.*
